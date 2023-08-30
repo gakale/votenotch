@@ -50,6 +50,14 @@ class VoteController extends Controller
             'notify_url' => route('cinetpay.notify'),
             'return_url' => $return_url,
             'channels' => 'ALL',
+            'alternative_currency' => 'USD', // exemple
+            'customer_email' => 'email@example.com', // exemple
+            'customer_phone_number' => '1234567890', // exemple
+            'customer_address' => '123 Main St', // exemple
+            'customer_city' => 'Anytown', // exemple
+            'customer_country' => 'CI', // exemple
+            'customer_state' => 'AnyState', // exemple
+            'customer_zip_code' => '12345' // exemple
         ];
 
         // appelle l'API de CinetPay pour générer le paiement
