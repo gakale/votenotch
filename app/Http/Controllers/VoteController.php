@@ -4,9 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Candidate;
 use App\Models\Vote;
+use CinetPay\CinetPay;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
-use PHPUnit\Exception;
 
 class VoteController extends Controller
 {
@@ -29,10 +29,10 @@ class VoteController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request ,  $id)
+    public function store(Request $request, $id)
     {
         $candidate = Candidate::findOrFail($id);  // Récupérer le candidat à partir de l'ID
-        $transaction_id = uniqid();
+        $transaction_id = uniqid('', true);
         $apikey = config('cinetpay.apikey');
         $site_id = config('cinetpay.site_id');
         $secret_key = config('cinetpay.secret_key');
@@ -42,7 +42,7 @@ class VoteController extends Controller
         $data = [
             'apikey' => $apikey,
             'site_id' => $site_id,
-            'secret_key'=> $secret_key,
+            'secret_key' => $secret_key,
             'transaction_id' => $transaction_id,
             'amount' => 100, // Montant du vote
             'currency' => 'XOF',
@@ -132,6 +132,12 @@ class VoteController extends Controller
         }
     }
 
+    /**
+     * Return URL
+     * @param Request $request
+     * @return \Illuminate\Http\RedirectResponse
+     * ToDo: Le traitement d'une transaction réussie ou échouée ne doit pas se faire dans cette méthode, elle doit plutôt se faire uniquement dans la méthode handleCinetPayNotification (Avec verification au niveau de la base de données et de CinetPay)
+     */
     public function handleCinetPayReturn(Request $request)
     {
         // Récupérer les données retournées par CinetPay
@@ -146,21 +152,21 @@ class VoteController extends Controller
 
         try {
             // Vérifier l'état de la transaction
-            $CinetPay->getPayStatus($transaction_id, $site_id);
-            $message = $CinetPay->chk_message;
-            $code = $CinetPay->chk_code;
+            $CinetPay->setTransId($transaction_id)->getPayStatus();
+            $message = $CinetPay->_cpm_error_message;
+            $code = $CinetPay->_cpm_result;
 
             // Vérifier si la transaction a réussi
             if ($code == '00') {
                 // Transaction réussie
                 // Mettre à jour la base de données, délivrer le service, etc.
                 return redirect()->route('success.page')->with('message', 'Paiement réussi');
-            } else {
-                // Transaction échouée
-                // Mettre à jour la base de données, informer l'utilisateur, etc.
-                return redirect()->route('failure.page')->with('message', 'Paiement échoué : ' . $message);
             }
-        } catch (Exception $e) {
+
+// Transaction échouée
+            // Mettre à jour la base de données, informer l'utilisateur, etc.
+            return redirect()->route('failure.page')->with('message', 'Paiement échoué : ' . $message);
+        } catch (\Exception $e) {
             // Gérer les exceptions
             return redirect()->route('error.page')->with('message', 'Erreur : ' . $e->getMessage());
         }
