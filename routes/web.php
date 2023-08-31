@@ -24,3 +24,4 @@ Route::get('/candidates/{id}', [CandidateController::class, 'show'])->name('cand
 Route::get('/success', [VoteController::class, 'successPage'])->name('success.page');
 Route::get('/failure', [VoteController::class, 'failurePage'])->name('failure.page');
 Route::get('/error', [VoteController::class, 'errorPage'])->name('error.page');
+

@@ -16,7 +16,11 @@ class Vote extends Model
         'description',
         'channels',
         'candidate_id',
-        'payer_phone',
+        'number',
+        'email',
+        'payment_status',
+        'payment_reference',
+
 
     ];
 

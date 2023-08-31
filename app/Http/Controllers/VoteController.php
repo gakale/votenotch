@@ -31,18 +31,25 @@ class VoteController extends Controller
      */
     public function store(Request $request, $id)
     {
+        // recupéré les données du candidat
+        $number = $request->input('number');
+        $email = $request->input('email');
+
+
         $candidate = Candidate::findOrFail($id);  // Récupérer le candidat à partir de l'ID
         $transaction_id = uniqid('', true);
         $apikey = config('cinetpay.apikey');
         $site_id = config('cinetpay.site_id');
         $secret_key = config('cinetpay.secret_key');
         $return_url = route('cinetpay.return' , ['candidate_id' => $candidate->id]);
-        $payer_phone = $request->input('payer_phone');  // Récupérer le numéro de téléphone du payeur depuis le formulaire
         // Enregistrer le vote dans la base de données
-        $vote = Vote::create([
+         Vote::create([
             'candidate_id' => $id,
             'payment_status' => false,
             'payment_reference' => null,
+             'number' => $number,
+             'email' => $email,
+
         ]);
         // Initialiser les paramètres CinetPay
         $data = [
@@ -71,7 +78,6 @@ class VoteController extends Controller
 
         if ($response->successful()) {
             $payment_url = $response->json()['data']['payment_url'];
-            session(['payer_phone' => $payer_phone, 'transaction_id' => $transaction_id]);
             return redirect($payment_url);
         } else {
             return back()->with('error', 'Erreur lors de l\'initialisation du paiement.');
@@ -115,7 +121,6 @@ class VoteController extends Controller
      */
     public function handleCinetPayNotification(Request $request)
     {
-        dump($request->all());
 
         // Valider les données reçues (ceci est un exemple simple, vous devrez peut-être ajouter des validations supplémentaires)
         $request->validate([
@@ -139,8 +144,6 @@ class VoteController extends Controller
                 'payer_phone' => session('payer_phone')  // Utilisez la session pour récupérer le numéro de téléphone
 
             ]);
-
-           dump($vote);
 
             // Mettre à jour le nombre de votes pour le candidat
             $candidate = Candidate::find($candidate_id);
@@ -197,7 +200,7 @@ class VoteController extends Controller
                 $candidate = Candidate::find($vote->candidate_id);
                 $candidate->increment('votes_count');
 
-                return redirect()->route('success.page')->with('message', 'Paiement réussi');
+                return redirect()->route('success.page')->with('message', 'Merci davoir voté.');
             }
 
             // Transaction échouée

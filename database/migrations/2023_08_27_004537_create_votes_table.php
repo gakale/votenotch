@@ -17,6 +17,8 @@ return new class extends Migration
             $table->unsignedBigInteger('candidate_id');
             $table->boolean('payment_status')->default(false);
             $table->string('payment_reference')->nullable();
+            $table->string('email');
+            $table->string('number');
             $table->foreign('candidate_id')->references('id')->on('candidates')->onDelete('cascade');
             $table->timestamps();
         });
