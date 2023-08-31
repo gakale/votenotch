@@ -36,9 +36,15 @@ class VoteController extends Controller
         $apikey = config('cinetpay.apikey');
         $site_id = config('cinetpay.site_id');
         $secret_key = config('cinetpay.secret_key');
-        $return_url = route('cinetpay.return');
-
-
+        $return_url = route('cinetpay.return' , ['candidate_id' => $candidate->id]);
+        $payer_phone = $request->input('payer_phone');  // Récupérer le numéro de téléphone du payeur depuis le formulaire
+        // Enregistrer le vote dans la base de données
+        $vote = Vote::create([
+            'candidate_id' => $id,
+            'payment_status' => false,
+            'payment_reference' => null,
+        ]);
+        // Initialiser les paramètres CinetPay
         $data = [
             'apikey' => $apikey,
             'site_id' => $site_id,
@@ -48,7 +54,7 @@ class VoteController extends Controller
             'currency' => 'XOF',
             'description' => 'Vote pour ' . $candidate->name,  // Utiliser le nom du candidat
             'notify_url' => route('cinetpay.notify'),
-            'return_url' => $return_url,
+            'return_url' => $return_url ,
             'channels' => 'ALL',
             'alternative_currency' => 'USD', // exemple
             'customer_email' => 'email@example.com', // exemple
@@ -65,6 +71,7 @@ class VoteController extends Controller
 
         if ($response->successful()) {
             $payment_url = $response->json()['data']['payment_url'];
+            session(['payer_phone' => $payer_phone, 'transaction_id' => $transaction_id]);
             return redirect($payment_url);
         } else {
             return back()->with('error', 'Erreur lors de l\'initialisation du paiement.');
@@ -108,6 +115,8 @@ class VoteController extends Controller
      */
     public function handleCinetPayNotification(Request $request)
     {
+        dump($request->all());
+
         // Valider les données reçues (ceci est un exemple simple, vous devrez peut-être ajouter des validations supplémentaires)
         $request->validate([
             'transaction_id' => 'required',
@@ -123,11 +132,15 @@ class VoteController extends Controller
         // Vérifier le statut du paiement
         if ($payment_status == 'ACCEPTED') {
             // Enregistrer le vote dans la base de données
-            Vote::create([
+           $vote = Vote::create([
                 'candidate_id' => $candidate_id,
                 'payment_status' => true,
                 'payment_reference' => $transaction_id,
+                'payer_phone' => session('payer_phone')  // Utilisez la session pour récupérer le numéro de téléphone
+
             ]);
+
+           dump($vote);
 
             // Mettre à jour le nombre de votes pour le candidat
             $candidate = Candidate::find($candidate_id);
@@ -151,6 +164,11 @@ class VoteController extends Controller
         // Récupérer les données retournées par CinetPay
         $transaction_id = $request->input('transaction_id');
 
+        $vote = Vote::where('payment_reference', null)->first();
+
+        if (!$vote) {
+            return redirect()->route('error.page')->with('message', 'Erreur : Aucun vote temporaire trouvé.');
+        }
         // Initialisation des paramètres CinetPay
         $apikey = config('cinetpay.apikey');
         $site_id = config('cinetpay.site_id');
@@ -163,15 +181,26 @@ class VoteController extends Controller
             $CinetPay->setTransId($transaction_id)->getPayStatus();
             $message = $CinetPay->_cpm_error_message;
             $code = $CinetPay->_cpm_result;
+            $CinetPay->setCelPhoneNum(session('payer_phone'));  // Utilisez la session pour récupérer le numéro de téléphone
 
             // Vérifier si la transaction a réussi
             if ($code == '00') {
                 // Transaction réussie
-                // Mettre à jour la base de données, délivrer le service, etc.
+                // Mettre à jour la base de données, informer l'utilisateur, etc.
+                $vote->update([
+                    'payment_status' => true,
+                    'payment_reference' => $transaction_id,
+                    'payer_phone' => session('payer_phone')  // Utilisez la session pour récupérer le numéro de téléphone
+                ]);
+
+                // Mettre à jour le nombre de votes pour le candidat
+                $candidate = Candidate::find($vote->candidate_id);
+                $candidate->increment('votes_count');
+
                 return redirect()->route('success.page')->with('message', 'Paiement réussi');
             }
 
-// Transaction échouée
+            // Transaction échouée
             // Mettre à jour la base de données, informer l'utilisateur, etc.
             return redirect()->route('failure.page')->with('message', 'Paiement échoué : ' . $message);
         } catch (\Exception $e) {

@@ -16,7 +16,7 @@ use App\Http\Controllers\VoteController;
 
 Route::get('/', [CandidateController::class, 'index'])->name('candidates.index');
 Route::post('/cinetpay/notify', [VoteController::class, 'handleCinetPayNotification'])->name('cinetpay.notify');
-Route::match(['get', 'post'], 'cinetpay/return', [VoteController::class, 'handleCinetPayReturn'])->name('cinetpay.return');
+Route::post( 'cinetpay/return', [VoteController::class, 'handleCinetPayReturn'])->name('cinetpay.return');
 
 Route::post('/candidates/{id}/vote', [VoteController::class, 'store'])->name('candidates.vote');
 Route::get('/candidates/{id}', [CandidateController::class, 'show'])->name('candidates.show');

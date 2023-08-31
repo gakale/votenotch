@@ -16,6 +16,8 @@ class Vote extends Model
         'description',
         'channels',
         'candidate_id',
+        'payer_phone',
+
     ];
 
     public function candidate()
