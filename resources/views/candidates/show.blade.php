@@ -107,11 +107,12 @@
                         @csrf
                         <label for="number">Votre Numéro</label>
 						<input type="text" required class="form-control" name="number" placeholder="Votre Numéro">
+						<input type="hidden" name="amount" value="1000">
 						<br>
                         <label for="email">Votre mail</label>
 						<input type="email" required class="form-control" name="email" placeholder="Votre mail">
 						<hr>
-						<p style="color: #000;">1 vote = 655,55 fr / 1 euro </p>
+						<p style="color: #000;">1 vote = 10000 / Fcfa </p>
 						<input type="submit" class="btn btn-black py-3 px-5" name="submit" value="Voter Candidate">
 					</form>
 
